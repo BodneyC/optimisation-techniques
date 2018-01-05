@@ -221,6 +221,49 @@ void FindClosestDistance_MT_Block_Branchless_SIMD(int n, float *x, float *y, flo
 
 					for (int k = 0; k < 7 + (i + i_chunk != j + j_chunk); k++)
 					{
+                        /*********** Only works for AVX2 enabled *********/
+                        x_256_j = _mm256_permutevar8x32_ps(x_256_j, _mm256_set_epi32(0, 7, 6, 5, 4, 3, 2, 1));
+                        y_256_j = _mm256_permutevar8x32_ps(y_256_j, _mm256_set_epi32(0, 7, 6, 5, 4, 3, 2, 1));
+
+						float8 d = Distance2D_SIMD(x_256[(i / 8) + i_chunk], y_256[(i / 8) + i_chunk], x_256_j, y_256_j);
+						
+						results_256[(i / 8) + i_chunk] = _mm256_blendv_ps(results_256[(i / 8) + i_chunk], d,
+							_mm256_cmp_ps(d, results_256[(i / 8) + i_chunk], _CMP_LT_OQ) // MASK
+						);
+					}
+				}
+			}
+		}
+	}
+}
+
+/******* [MT | Locality | Branchless | SIMD] *******/
+void FindClosestDistance_MT_Block_Branchless_SIMD(int n, float *x, float *y, float *results, int rankID)
+{
+	int begin = rankID * (n / NB_THREADS);
+	int end = (rankID + 1) * (n / NB_THREADS);
+
+	float8 *results_256 = (float8 *)results;
+	float8 *x_256 = (float8 *)x;
+	float8 *y_256 = (float8 *)y;
+	float8 x_256_j, y_256_j; 
+
+	for (int i = begin; i < end; i += 8)
+		results_256[i / 8] = set8(999);
+
+	for (int i = begin; i < end; i += CHUNK_SIZE)
+	{
+		for (int j = 0; j < n; j += CHUNK_SIZE)
+		{
+			for (int i_chunk = 0; i_chunk < (CHUNK_SIZE / 8); i_chunk++)
+			{
+				for (int j_chunk = 0; j_chunk < (CHUNK_SIZE / 8); j_chunk++)
+				{
+					x_256_j = x_256[(j / 8) + j_chunk];
+					y_256_j = y_256[(j / 8) + j_chunk];
+
+					for (int k = 0; k < 7 + (i + i_chunk != j + j_chunk); k++)
+					{
 						float tmp_x = x_256_j.m256_f32[0];
 						float tmp_y = y_256_j.m256_f32[0];
 
