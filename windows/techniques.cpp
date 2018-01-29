@@ -1,7 +1,6 @@
 /***************************************************************************
-* Filename: LabClass.cpp
+* Filename: techniques.cpp
 * Author: Benjamin Carrington
-* Purpose: Coursework #1 [CS-M98]
 *
 ***************************************************************************
 * Execution times (averages of five executions):
